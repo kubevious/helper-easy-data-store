@@ -1,9 +1,9 @@
 version: '3.3'
 services:
 
- helper-mysql:
+ helper-easy-data-store-mysql:
   image: 'mysql:8.0.19'
-  container_name: 'helper-mysql'
+  container_name: 'helper-easy-data-store-mysql'
   # networks:
     # - kubevious-saas
   volumes:
@@ -19,6 +19,6 @@ services:
 # volumes:
   # db_data:
 
-# networks:
-#   kubevious-saas:
-#     external: true
+networks:
+  kubevious-helper-easy-data-store:
+    external: true
