@@ -40,7 +40,7 @@ steps:
     services:
       composition:
         mysql:
-          image: mysql:8.0.19
+          image: mysql:8.0.22
           ports:
             - 3306
           environment:
@@ -48,7 +48,7 @@ steps:
             - "MYSQL_ALLOW_EMPTY_PASSWORD=yes"
           command: --default-authentication-plugin=mysql_native_password
       readiness:
-        image: mysql:8.0.19
+        image: mysql:8.0.22
         timeoutSeconds: 90
         volumes:
           - './${{CF_REPO_NAME}}/mysql:/my-init-script'
