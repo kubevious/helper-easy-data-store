@@ -86,3 +86,25 @@ steps:
           - "mysql --host=mysql --user=root --password= sample-db -e \"show databases;\""    
           - "mysql --host=mysql --user=root --password= sample-db < /my-init-script/init.sql"
           - "mysql --host=mysql --user=root --password= sample-db -e \"show tables;\""    
+
+  publish:
+    title: Publish
+    stage: publish
+    image: 'kubevious/node-builder:12'
+    working_directory: "${{CICD_REPO_PATH}}"
+    when: 
+      condition: 
+        all: 
+          noCiCdAuthor: 'includes("${{CF_COMMIT_MESSAGE}}", "Version Release") == false' 
+          masterBranch: '"${{CF_BRANCH}}" == "master"'
+    commands:
+      - echo '//registry.npmjs.org/:_authToken=${NPM_TOKEN}' > ~/.npmrc
+      - git config --global user.email "cicd@kubevious.io"
+      - git config --global user.name "Kubevious CI/CD"
+      - 'npm version patch -m "Version Release v%s"'
+      - git status
+      - git pull
+      - git status
+      - git push 
+      - git push --tags
+      - npm publish
