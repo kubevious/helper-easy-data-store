@@ -7,3 +7,4 @@ export { MetaTable } from './meta/meta-table'
 export { MetaTableColumn } from './meta/meta-table-column'
 
 export { MySqlDriver, MySqlStatement } from '@kubevious/helper-mysql';
+export { StatementInfo as MySqlStatementInfo } from '@kubevious/helper-mysql/dist/mysql-driver';
