@@ -1,23 +1,25 @@
-const _ = require('the-lodash');
-const MetaTable = require('./meta-table');
+import _ from 'the-lodash';
+import { MetaTable } from './meta-table';
 
-class MetaStore
+export class MetaStore
 {
+    private _tables : Record<string, MetaTable> = {};
+
     constructor()
     {
-        this._tables = {};
+
     }
 
-    getTable(name)
+    getTable(name: string) : MetaTable
     {
-        var table = this._tables[name];
+        let table = this._tables[name];
         if (!table) {
             throw new Error("Unknown table: " + name);
         } 
         return table;
     }
 
-    table(name)
+    table(name: string) : MetaTable
     {
         var table = new MetaTable(this, name);
         this._tables[name] = table;
@@ -25,5 +27,3 @@ class MetaStore
     }
     
 }
-
-module.exports = MetaStore;

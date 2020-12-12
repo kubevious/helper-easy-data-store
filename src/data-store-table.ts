@@ -1,13 +1,25 @@
-const Promise = require('the-promise');
-const _ = require('the-lodash');
-const DataStoreTableSynchronizer = require('./data-store-table-synchronizer');
+import _ from 'the-lodash';
+import { Promise } from 'the-promise';
+import { ILogger } from 'the-logger' ;
 
-class DataStoreTable
+import { DataStore } from './data-store' ;
+import { DataStoreTableSynchronizer } from './data-store-table-synchronizer' ;
+import { MetaTable } from './meta/meta-table' ;
+import { MySqlDriver } from '@kubevious/helper-mysql';
+
+
+export type DataItem = Record<string, any>;
+
+export class DataStoreTable
 {
-    constructor(parent, metaTable)
+    private _parent : DataStore;
+    private _mysqlDriver : MySqlDriver;
+    private _metaTable : MetaTable;
+
+    constructor(parent: DataStore, metaTable: MetaTable)
     {
         this._parent = parent;
-        this._mysqlDriver = parent._mysqlDriver;
+        this._mysqlDriver = parent.mysql;
         this._metaTable = metaTable;
     }
 
@@ -19,17 +31,21 @@ class DataStoreTable
         return this._parent.logger;
     }
 
-    synchronizer(filterValues, skipDelete)
+    get metaTable() {
+        return this._metaTable;
+    }
+
+    synchronizer(filterValues?: Record<string, any> | null, skipDelete? : boolean) : DataStoreTableSynchronizer
     {
         return new DataStoreTableSynchronizer(this, filterValues, skipDelete);
     }
 
-    queryMany(target, fields)
+    queryMany(target? : Record<string, any> | null, fields?: string[]) : Promise<DataItem[]>
     {
         return this._queryItems(target, fields);
     }
 
-    querySingle(target, fields)
+    querySingle(target? : Record<string, any>, fields?: string[]) : Promise<DataItem | null>
     {
         return this._queryItems(target, fields)
             .then(result => {
@@ -40,85 +56,85 @@ class DataStoreTable
             });
     }
 
-    _queryItems(target, fields)
+    private _queryItems(target? : Record<string, any> | null, fields?: string[]): Promise<DataItem[]>
     {
-        var target = this._buildTarget(target);
+        const myTarget = this._buildTarget(target);
         fields = fields || this._metaTable.getQueryFields();
-        return this._execute(
-            this._buildSelectSql(fields, _.keys(target)),
-            _.keys(target),
-            target
+        return this._execute<DataItem[]>(
+            this._buildSelectSql(fields, _.keys(myTarget)),
+            _.keys(myTarget),
+            myTarget
         ).then(result => {
             return result.map(x => this._massageUserRow(x))
         })
     }
 
-    create(data)
+    create(data : DataItem)
     {
-        var data = this._buildTarget(data);
-        return this._execute(
+        const myData = this._buildTarget(data);
+        return this._execute<any>(
             this._buildInsertSql(this._metaTable.getCreateFields()),
             this._metaTable.getCreateFields(),
-            data
+            myData
         )
         .then(result => {
             if (result.insertId) {
                 var keyColumn = this._metaTable.getKeyFields()[0];
                 if (keyColumn)
                 {
-                    data[keyColumn] = result.insertId;
+                    myData[keyColumn] = result.insertId;
                 }
             }
-            return data;
+            return myData;
         });
     }
 
-    update(target, data)
+    update(target : Record<string, any>, data : Record<string, any>) : Promise<void>
     {
-        var target = this._buildTarget(target);
-        var fields = _.keys(data);
-        var combinedData = _.defaults(_.clone(target), data);
+        const myTarget = this._buildTarget(target);
+        const fields = _.keys(data);
+        const combinedData = _.defaults(_.clone(myTarget), data);
         return this._execute(
-            this._buildUpdateSql(fields, _.keys(target)),
+            this._buildUpdateSql(fields, _.keys(myTarget)),
             _.concat(
                 fields,
-                _.keys(target)
+                _.keys(myTarget)
             ),
             combinedData
         ).then(() => {});
     }
 
-    createOrUpdate(data)
+    createOrUpdate(data: DataItem) : Promise<DataItem>
     {
-        var data = this._buildTarget(data);
-        return this._execute(
+        const myData = this._buildTarget(data);
+        return this._execute<any>(
             this._buildInsertOrUpdateSql(this._metaTable.getCreateFields(), this._metaTable.getUpdateFields()),
             _.concat(this._metaTable.getCreateFields(), this._metaTable.getUpdateFields()),
-            data
+            myData
         )
         .then(result => {
             if (result.insertId) {
                 var keyColumn = this._metaTable.getKeyFields()[0];
                 if (keyColumn)
                 {
-                    data[keyColumn] = result.insertId;
+                    myData[keyColumn] = result.insertId;
                 }
             }
-            return data;
+            return myData;
         });
     }
 
-    delete(data)
+    delete(target?: Record<string, any>) : Promise<void>
     {
-        var data = this._buildTarget(data);
+        const myTarget = this._buildTarget(target);
         return this._execute(
             this._buildDeleteSql(this._metaTable.getDeleteFields()),
             this._metaTable.getDeleteFields(),
-            data
+            myTarget
         ).then(() => {});
     }
 
-    _buildSelectSql(what, filters)
+    private _buildSelectSql(what: string[], filters : string[]) : string
     {
         what = what || [];
         var fields = what.map(x => '`' + x + '`');
@@ -141,7 +157,7 @@ class DataStoreTable
         return sql;
     }
 
-    _buildInsertSql(what)
+    private _buildInsertSql(what: string[]) : string
     {
         what = what || [];
 
@@ -157,7 +173,7 @@ class DataStoreTable
         return sql;
     }
 
-    _buildUpdateSql(what, filters)
+    private _buildUpdateSql(what: string[], filters: string[]) : string
     {
         what = what || [];
         var updateClause = 
@@ -178,7 +194,7 @@ class DataStoreTable
         return sql;
     }
 
-    _buildInsertOrUpdateSql(whatToCreate, whatToUpdate)
+    private _buildInsertOrUpdateSql(whatToCreate: string[], whatToUpdate: string[])
     {
         var createFields = whatToCreate.map(x => '`' + x + '`');
 
@@ -198,7 +214,7 @@ class DataStoreTable
         return sql;
     }
 
-    _buildDeleteSql(filters)
+    private _buildDeleteSql(filters: string[]) : string
     {
         filters = filters || [];
 
@@ -211,12 +227,12 @@ class DataStoreTable
         return sql;
     }
 
-    _buildTarget(target)
+    private _buildTarget(target?: Record<string, any> | null) : Record<string, any>
     {
         return target || {};
     }
 
-    _execute(sql, fields, data)
+    private _execute<T>(sql: string, fields : string[], data : Record<string, any>) : Promise<T>
     {
         var statement = this._mysqlDriver.statement(sql);
         var params = fields.map(x => {
@@ -228,7 +244,7 @@ class DataStoreTable
         return statement.execute(params);
     }
 
-    _massageUserRow(row)
+    private _massageUserRow(row: DataItem) : DataItem
     {
         for(var column of this._metaTable.getMassageableColumns())
         {
@@ -238,5 +254,3 @@ class DataStoreTable
         return row;
     }
 }
-
-module.exports = DataStoreTable;
