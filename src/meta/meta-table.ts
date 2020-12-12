@@ -1,22 +1,26 @@
-const _ = require('the-lodash');
-const MetaTableColumn = require('./meta-table-column');
+import _ from 'the-lodash';
+import { MetaStore } from './meta-store';
+import { MetaTableColumn } from './meta-table-column';
 
-class MetaTable
+export class MetaTable
 {
-    constructor(parent, name)
+    private _parent : MetaStore;
+    private _name : string;
+    private _columns : Record<string, MetaTableColumn> = {};
+
+    private _keyFields : string[] = [];
+    private _queryFields : string[] = [];
+    private _createFields : string[] = [];
+    private _deleteFields : string[] = [];
+
+
+    constructor(parent: MetaStore, name: string)
     {
         this._parent = parent;
         this._name = name;
-
-        this._columns = {};
-
-        this._keyFields = [];
-        this._queryFields = [];
-        this._createFields = [];
-        this._deleteFields = [];
     }
 
-    _makeColumn(name)
+    private _makeColumn(name: string)
     {
         if (!this._columns[name]) {
             this._columns[name] = new MetaTableColumn(this, name);
@@ -48,7 +52,7 @@ class MetaTable
         return this._deleteFields;
     }
 
-    getColumn(name)
+    getColumn(name: string)
     {
         var column = this._columns[name];
         if (!column) {
@@ -59,15 +63,15 @@ class MetaTable
 
     getMassageableColumns()
     {
-        return _.values(this._columns).filter(x => x._fromDbCb);
+        return _.values(this._columns).filter(x => x.hasFromDbCb);
     }
 
-    table(name)
+    table(name: string)
     {
         return this._parent.table(name);
     }
 
-    key(name)
+    key(name: string)
     {
         var column = this._makeColumn(name);
         column.isKey = true;
@@ -83,7 +87,7 @@ class MetaTable
         return column;
     }
 
-    field(name)
+    field(name: string)
     {
         var column = this._makeColumn(name);
 
@@ -92,7 +96,7 @@ class MetaTable
         return column;
     }
 
-    _buildQueryFields()
+    private _buildQueryFields()
     {
         this._queryFields = _.concat(
             _.values(this._columns).filter(x => x.isKey),
@@ -101,7 +105,7 @@ class MetaTable
             .map(x => x.name);
     }
 
-    _buildCreateFields()
+    private _buildCreateFields()
     {
         this._createFields = _.concat(
             _.values(this._columns).filter(x => x.isSettable)
@@ -109,7 +113,7 @@ class MetaTable
             .map(x => x.name);
     }
 
-    _buildModifyFields()
+    private _buildModifyFields()
     {
         this._deleteFields = _.concat(
             _.values(this._columns).filter(x => x.isKey)
@@ -117,5 +121,3 @@ class MetaTable
             .map(x => x.name);
     }
 }
-
-module.exports = MetaTable;

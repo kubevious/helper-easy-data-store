@@ -1,9 +1,14 @@
-const should = require('should');
-const _ = require('the-lodash');
-const logger = require('the-logger').setup('test', { pretty: true });
-const DataStore = require('../').DataStore;
+import 'mocha';
+import should = require('should');
+import _ from 'the-lodash';
 
-function buildTestSuite(isDebug) {
+import { setupLogger, LoggerOptions } from 'the-logger';
+const loggerOptions = new LoggerOptions().enableFile(false).pretty(true);
+const logger = setupLogger('test', loggerOptions);
+
+import { DataStore } from '../src/';
+
+function buildTestSuite(isDebug : boolean) {
 
 describe('data-store', function() {
 
@@ -185,10 +190,10 @@ describe('data-store', function() {
             })
             .then(result => {
                 console.log(result);
-                (result).should.be.an.Object();
-                (result.id).should.be.Number();
-                (result.name).should.be.equal('bruce');
-                (result.email).should.be.equal('bruce@lee.com');
+                should(result).be.an.Object();
+                should(result!.id).be.Number();
+                should(result!.name).be.equal('bruce');
+                should(result!.email).be.equal('bruce@lee.com');
             })
             .then(() => dataStore.close())
     });
@@ -377,7 +382,7 @@ describe('data-store', function() {
             ]))
             .then(() => table.queryMany())
             .then(result => {
-                logger.info(result);
+                logger.info("Results:", result);
 
                 (result).should.be.an.Array();
                 (result.length).should.be.equal(2);
