@@ -56,7 +56,7 @@ steps:
     title: Run Unit Tests
     stage: test
     image: 'kubevious/node-builder:12'
-    working_directory: "${{clone}}"
+    working_directory: "${{CICD_REPO_PATH}}"
     environment:
       - "MYSQL_HOST=mysql"
       - "MYSQL_PORT=3306"
