@@ -1,80 +1,108 @@
 import _ from 'the-lodash';
-import { MetaTable } from './meta-table';
+import { MetaTable, MetaTableBuilder } from './meta-table';
 
-export type ValueConverter = (value: any) => any;
+export type ConverterFunc = (value: any) => any;
 
-export class MetaTableColumn
-{
-    private _parent : MetaTable;
-    private _name : string;
+export class MetaTableColumnData {
+    public name: string = '';
+
+    public toDbCb?: ConverterFunc;
+    public fromDbCb?: ConverterFunc;
 
     public isSettable = true;
+    public isAutoGeneratable = false;
     public isKey = false;
 
-    private _toDbCb? : ValueConverter;
-    private _fromDbCb? : ValueConverter;
+    public isPhysicalKey = false;
+    public isComplexColumn = false;
+}
 
-    constructor(parent : MetaTable, name: string)
-    {
+export class MetaTableColumn {
+    private _parent: MetaTable;
+    private _data: MetaTableColumnData;
+
+    constructor(parent: MetaTable, data: MetaTableColumnData) {
         this._parent = parent;
-        this._name = name;
-
+        this._data = data;
     }
 
-    get name() {
-        return this._name;
+    get name(): string {
+        return this._data.name;
     }
 
-    get hasFromDbCb() : boolean {
-        return _.isNotNullOrUndefined(this._fromDbCb);
+    get isKey(): boolean {
+        return this._data.isKey;
     }
 
-    table(name: string)
-    {
-        return this._parent.table(name);
-    }
-    
-    key(name: string)
-    {
-        return this._parent.key(name);
+    get isAutoGeneratable(): boolean {
+        return this._data.isAutoGeneratable;
     }
 
-    field(name: string)
-    {
-        return this._parent.field(name);
+    get isComplexColumn(): boolean {
+        return this._data.isComplexColumn;
     }
 
-    settable()
-    {
-        this.isSettable = true;
-        return this;
-    }
-
-    to(cb: ValueConverter)
-    {
-        this._toDbCb = cb;
-        return this;
-    }
-
-    from(cb: ValueConverter)
-    {
-        this._fromDbCb = cb;
-        return this;
-    }
-
-    _makeDbValue(value: any)
-    {
-        if (this._toDbCb) {
-            return this._toDbCb!(value);
+    makeDbValue(value: any): any {
+        if (this._data.toDbCb) {
+            return this._data.toDbCb!(value);
         }
         return value;
     }
 
-    _makeUserValue(value: any)
-    {
-        if (this._fromDbCb) {
-            return this._fromDbCb!(value);
+    makeUserValue(value: any): any {
+        if (this._data.fromDbCb) {
+            return this._data.fromDbCb!(value);
         }
         return value;
+    }
+}
+
+export class MetaTableColumnBuilder {
+    private parent: MetaTableBuilder;
+    private data: MetaTableColumnData;
+
+    constructor(parent: MetaTableBuilder, data: MetaTableColumnData) {
+        this.parent = parent;
+        this.data = data;
+    }
+
+    // Self Builder
+    settable(): MetaTableColumnBuilder {
+        this.data.isSettable = true;
+        return this;
+    }
+
+    autogenerateable(): MetaTableColumnBuilder {
+        this.data.isAutoGeneratable = true;
+        return this;
+    }
+
+    complex(): MetaTableColumnBuilder {
+        this.data.isComplexColumn = true;
+        return this;
+    }
+
+    to(cb: ConverterFunc): MetaTableColumnBuilder {
+        this.data.toDbCb = cb;
+        return this;
+    }
+
+    from(cb: ConverterFunc): MetaTableColumnBuilder {
+        this.data.fromDbCb = cb;
+        return this;
+    }
+
+    // New Column Builder
+    key(name: string): MetaTableColumnBuilder {
+        return this.parent.key(name);
+    }
+
+    field(name: string): MetaTableColumnBuilder {
+        return this.parent.field(name);
+    }
+
+    // Table Builder
+    table(name: string): MetaTableBuilder {
+        return this.parent.table(name);
     }
 }

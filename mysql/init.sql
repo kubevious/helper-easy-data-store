@@ -6,20 +6,29 @@ CREATE TABLE IF NOT EXISTS `contacts` (
   `name` VARCHAR(255) NOT NULL,
   `email` VARCHAR(255) NOT NULL,
   PRIMARY KEY (`id`)
-) ENGINE=InnoDB CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=latin1;
 
 
 CREATE TABLE IF NOT EXISTS `clusters` (
   `id` int NOT NULL AUTO_INCREMENT,
-  `project_id` VARCHAR(255) NOT NULL,
+  `projectid` VARCHAR(255) NOT NULL,
   `name` VARCHAR(255) NOT NULL,
   `address` VARCHAR(255) NOT NULL,
   PRIMARY KEY (`id`)
-) ENGINE=InnoDB CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=latin1;
 
 
 CREATE TABLE IF NOT EXISTS `users` (
+  `projectid` VARCHAR(255) NOT NULL,
   `name` VARCHAR(255) NOT NULL,
   `email` VARCHAR(255) NOT NULL,
-  PRIMARY KEY (`name`)
-) ENGINE=InnoDB CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci;
+  PRIMARY KEY (`projectid`, `name`)
+) ENGINE=InnoDB DEFAULT CHARSET=latin1;
+
+
+CREATE TABLE IF NOT EXISTS `events` (
+  `projectid` VARCHAR(255) NOT NULL,
+  `message` VARCHAR(255) NOT NULL,
+  `date` DATETIME NOT NULL,
+  PRIMARY KEY (`projectid`, `message`)
+) ENGINE=InnoDB DEFAULT CHARSET=latin1;

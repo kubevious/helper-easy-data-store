@@ -1,10 +1,9 @@
-export { DataStore } from './data-store'
-export { DataStoreTable } from './data-store-table'
-export { DataStoreTableSynchronizer } from './data-store-table-synchronizer'
+export { DataStore, ITableAccessor } from './data-store';
+export { Data, ITableDriver, DeltaAction } from './driver';
+export { MetaStoreBuilder as DataStoreMetaBuilder } from './meta/meta-store';
+export { BuildTableMeta, DataStoreAccessorMetaBuilder, DataStoreTableAccessor } from './data-table-accessor';
 
-export { MetaStore } from './meta/meta-store'
-export { MetaTable } from './meta/meta-table'
-export { MetaTableColumn } from './meta/meta-table-column'
-
-export { MySqlDriver, MySqlStatement } from '@kubevious/helper-mysql';
-export { StatementInfo as MySqlStatementInfo } from '@kubevious/helper-mysql/dist/mysql-driver';
+export { MySqlDriver,
+         MySqlStatement,
+         PartitionManager,
+         ConnectionOptions as MySqlConnectionOptions } from '@kubevious/helper-mysql';

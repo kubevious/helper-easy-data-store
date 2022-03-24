@@ -1,123 +1,153 @@
 import _ from 'the-lodash';
-import { MetaStore } from './meta-store';
-import { MetaTableColumn } from './meta-table-column';
+import { MetaTableColumn, MetaTableColumnBuilder, MetaTableColumnData } from './meta-table-column';
+import { MetaStore, MetaStoreBuilder } from './meta-store';
 
-export class MetaTable
-{
-    private _parent : MetaStore;
-    private _name : string;
-    private _columns : Record<string, MetaTableColumn> = {};
+const SUPPORTED_DRIVERS: Record<string, boolean> = { mysql: true };
 
-    private _keyFields : string[] = [];
-    private _queryFields : string[] = [];
-    private _createFields : string[] = [];
-    private _deleteFields : string[] = [];
+export class MetaTableData {
+    public name: string = '';
+    public driverParams: any;
 
+    public columns: MetaTableColumn[] = [];
 
-    constructor(parent: MetaStore, name: string)
-    {
+    public columnsDict: Record<string, MetaTableColumn> = {};
+
+    public keyFields: string[] = [];
+    public keyColumns: MetaTableColumn[] = [];
+
+    public nonKeyFields: string[] = [];
+    public nonKeyColumns: MetaTableColumn[] = [];
+
+    public modifyFields: string[] = [];
+}
+
+export class MetaTable {
+    private _parent: MetaStore;
+    private _data: MetaTableData;
+
+    constructor(parent: MetaStore, data: MetaTableData) {
         this._parent = parent;
-        this._name = name;
+        this._data = data;
     }
 
-    private _makeColumn(name: string)
-    {
-        if (!this._columns[name]) {
-            this._columns[name] = new MetaTableColumn(this, name);
-        }
-        return this._columns[name];
+    get name(): string {
+        return this._data.name;
     }
 
-    getName() {
-        return this._name;
+    get driverName() {
+        return 'mysql';
     }
 
-    getKeyFields() {
-        return this._keyFields;
+    get driverParams(): any {
+        return this._data.driverParams;
     }
 
-    getQueryFields() {
-        return this._queryFields;
+    get keyFields(): string[] {
+        return this._data.keyFields;
     }
 
-    getCreateFields() {
-        return this._createFields;
+    get keyColumns(): MetaTableColumn[] {
+        return this._data.keyColumns;
     }
 
-    getUpdateFields() {
-        return this._createFields;
+    get nonKeyFields(): string[] {
+        return this._data.nonKeyFields;
     }
 
-    getDeleteFields() {
-        return this._deleteFields;
+    get nonKeyColumns(): MetaTableColumn[] {
+        return this._data.nonKeyColumns;
     }
 
-    getColumn(name: string)
-    {
-        var column = this._columns[name];
+    get modifyFields(): string[] {
+        return this._data.modifyFields;
+    }
+
+    get columns(): MetaTableColumn[] {
+        return this._data.columns;
+    }
+
+    getColumn(name: string): MetaTableColumn {
+        const column = this._data.columnsDict[name];
         if (!column) {
-            throw new Error("Unknown Column: " + name);;
+            throw new Error(`Unknown Column: ${name}`);
         }
         return column;
     }
+}
 
-    getMassageableColumns()
-    {
-        return _.values(this._columns).filter(x => x.hasFromDbCb);
+export class MetaTableBuilder {
+    private parent: MetaStoreBuilder;
+    private data: MetaTableData;
+    private _table: MetaTable;
+    private columns: Record<string, MetaTableColumnBuilder> = {};
+
+    constructor(parent: MetaStoreBuilder, data: MetaTableData, table: MetaTable) {
+        this.parent = parent;
+        this.data = data;
+        this._table = table;
     }
 
-    table(name: string)
-    {
-        return this._parent.table(name);
+    // Self Builder
+    driverParams(params: any) {
+        this.data.driverParams = params;
+        return this;
     }
 
-    key(name: string)
-    {
-        var column = this._makeColumn(name);
-        column.isKey = true;
-        column.isSettable = false;
-
-        this._keyFields = 
-            _.values(this._columns)
-                .filter(x => x.isKey)
-                .map(x => x.name);
-
-        this._buildQueryFields();
-        this._buildModifyFields();
+    key(name: string): MetaTableColumnBuilder {
+        const data = new MetaTableColumnData();
+        const column = this._makeColumn(data, name);
+        data.isKey = true;
+        data.isSettable = false;
+        this._buildFields();
         return column;
     }
 
-    field(name: string)
-    {
-        var column = this._makeColumn(name);
-
-        this._buildQueryFields();
-        this._buildCreateFields();
+    field(name: string): MetaTableColumnBuilder {
+        const data = new MetaTableColumnData();
+        const column = this._makeColumn(data, name);
+        this._buildFields();
         return column;
     }
 
-    private _buildQueryFields()
-    {
-        this._queryFields = _.concat(
-            _.values(this._columns).filter(x => x.isKey),
-            _.values(this._columns).filter(x => !x.isKey)
-            )
-            .map(x => x.name);
+    private _makeColumn(data: MetaTableColumnData, name: string): MetaTableColumnBuilder {
+        data.name = name;
+        const column = new MetaTableColumn(this._table, data);
+        const columnBuilder = new MetaTableColumnBuilder(this, data);
+        this.columns[name] = columnBuilder;
+        this.data.columnsDict[name] = column;
+        return columnBuilder;
     }
 
-    private _buildCreateFields()
-    {
-        this._createFields = _.concat(
-            _.values(this._columns).filter(x => x.isSettable)
-            )
-            .map(x => x.name);
+    private _buildFields() {
+        this.data.columns = sortColumns(_.values(this.data.columnsDict));
+
+        this.data.keyFields = this._makeFields((x) => x.isKey);
+        this.data.keyColumns = sortColumns(this.data.keyFields.map((x) => this.data.columnsDict[x]));
+
+        this.data.nonKeyFields = this._makeFields((x) => !x.isKey);
+        this.data.nonKeyColumns = sortColumns(
+            this.data.nonKeyFields.map((x) => this.data.columnsDict[x]),
+        );
+
+        this.data.modifyFields = _.concat(
+            this.data.columns.filter((x) => x.isKey),
+        ).map((x) => x.name);
     }
 
-    private _buildModifyFields()
-    {
-        this._deleteFields = _.concat(
-            _.values(this._columns).filter(x => x.isKey)
-            )
-            .map(x => x.name);
+    private _makeFields(filter: (value: MetaTableColumn) => boolean): string[] {
+        return this.data.columns
+            .filter((x) => filter(x))
+            .map((x) => x.name)
+            .sort();
     }
+
+    // Parent Builder
+
+    table(name: string): MetaTableBuilder {
+        return this.parent.table(name);
+    }
+}
+
+function sortColumns(input: MetaTableColumn[]): MetaTableColumn[] {
+    return _.sortBy(input, (x) => x.name);
 }
