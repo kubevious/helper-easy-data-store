@@ -4,7 +4,6 @@ import { ILogger } from 'the-logger';
 import { MetaStore, MetaStoreBuilder, MetaStoreData } from './meta/meta-store';
 import { IDriver, ITableDriver, Data, ConnectFunc, CacheOptions } from './driver';
 import { MySQL } from './impl/mysql/driver';
-import { MetaTable } from './meta/meta-table';
 import { DataStoreTableAccessor } from './data-table-accessor';
 import { TablesData } from './table-data';
 
@@ -54,7 +53,7 @@ export class DataStore implements ITableAccessor {
     }
 
     get mysql() {
-        return this._tryGetDriver('mysql');
+        return this._mysqlDriver;
     }
 
     onConnect(cb : () => Resolvable<any>) : void
@@ -72,35 +71,31 @@ export class DataStore implements ITableAccessor {
 
     init() {
         this._setupDrivers();
+
         return this._driversExec((driver) => driver.connect());
     }
 
     private _setupDrivers()
     {
-        const usedDrivers = this._extractUsedDriverAndTables();
+        this._setupMySqlDriver();
+    }
 
-        for (const name in usedDrivers) {
-            this.logger.info('[init] Driver: %s...', name);
+    private _setupMySqlDriver()
+    {
+        const name = 'mysql';
 
-            const tables = usedDrivers[name];
+        this.logger.info('[init] Driver: %s...', name);
 
-            const logger = this.logger.sublogger('Driver' + _.upperFirst(name));
-            let driver: IDriver;
-            if (name == 'mysql') {
-                this._mysqlDriver = new MySQL(logger, this._isDebug, tables, this._tablesData);
-                driver = this._mysqlDriver;
-            } else {
-                throw new Error('Could not find driver for ' + name);
-            }
+        const logger = this.logger.sublogger('Driver' + _.upperFirst(name));
+        this._mysqlDriver = new MySQL(logger, this._isDebug, this._meta.tables, this._tablesData);
 
-            driver.onConnect(() => {
-                this._determineConnected();
-            })
+        this._mysqlDriver.onConnect(() => {
+            this._determineConnected();
+        })
 
-            const driverInfo = new DriverInfo(logger, name, driver);
+        const driverInfo = new DriverInfo(logger, name, this._mysqlDriver);
 
-            this._drivers[name] = driverInfo;
-        }
+        this._drivers[name] = driverInfo;
     }
 
     waitConnect() : Promise<void> {
@@ -190,20 +185,6 @@ export class DataStore implements ITableAccessor {
         return Promise.parallel(_.values(this._drivers), (driverInfo) => {
             return action(driverInfo.driver);
         });
-    }
-
-    private _extractUsedDriverAndTables(): Record<string, MetaTable[]> {
-        const x: Record<string, MetaTable[]> = {};
-        for (const table of this._meta.tables) {
-            if (!table.driverName) {
-                throw new Error('Driver not set for table ' + table.name);
-            }
-            if (!x[table.driverName!]) {
-                x[table.driverName!] = []
-            }
-            x[table.driverName!].push(table);
-        }
-        return x;
     }
 
     private _tryGetDriver(name: string): IDriver | null {

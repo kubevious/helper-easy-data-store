@@ -39,6 +39,13 @@ export class MySQL implements IDriver {
         }
     }
 
+    get databaseClients() {
+        return _.keys(this._databases).map(x => ({
+            name: x,
+            client: this._databases[x]
+        }))
+    } 
+
     connect(): Resolvable<any> {
         return this._exec(x => x.connect());
     }

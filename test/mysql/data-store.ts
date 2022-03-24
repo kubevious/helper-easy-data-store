@@ -37,6 +37,16 @@ describe(testSuiteName, function() {
             .then(() => {
                 (dataStore.isConnected).should.be.true();
             })
+            .then(() => {
+                (dataStore.mysql!).should.be.ok();
+                (dataStore.mysql!.databaseClients).should.be.ok();
+
+                const clients = dataStore.mysql!.databaseClients!;
+                (clients[0]).should.be.ok();
+                (clients[0].name).should.be.equal('sample-db');
+                (clients[0].client).should.be.ok();
+            })
+
             .then(() => dataStore.close())
     });
 
