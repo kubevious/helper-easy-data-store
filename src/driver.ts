@@ -34,10 +34,22 @@ export interface FilterOptions {
     fields?: FieldFilter[];
 }
 
+
+export interface FieldOrder {
+    name: string;
+    asc: boolean;
+}
+
+export interface OrderOptions {
+    fields?: FieldOrder[];
+}
+
 export interface QueryOptions {
     skipCache?: boolean;
     fields?: FieldsOptions;
     filters?: FilterOptions;
+    order?: OrderOptions;
+    limitCount?: number;
 }
 
 export interface QueryCountOptions {

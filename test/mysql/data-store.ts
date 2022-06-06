@@ -1075,6 +1075,133 @@ describe(testSuiteName, function() {
     });
 
 
+
+    it(testCasePrefix + '-limit', function() {
+        const dataStore = new DataStore(logger, isDebug);
+
+        dataStore.meta()
+            .table('events')
+                .driverParams(driverParams)
+                .key('projectid')
+                .key('message')
+                .field('date')
+        ;
+
+        dataStore.init();
+
+        const table = dataStore.table('events');
+
+        return dataStore.waitConnect()
+            .then(() => dataStore.table('events').deleteMany())
+            .then(() => dataStore.table('events').createNew({ projectid: 'coke', message: 'foo1', date: '2020-08-10'}))
+            .then(() => dataStore.table('events').createNew({ projectid: 'pepsi', message: 'foo2', date: '2020-05-11'}))
+            .then(() => dataStore.table('events').createNew({ projectid: 'coke', message: 'bar3', date: '2020-05-12'}))
+            .then(() => dataStore.table('events').createNew({ projectid: 'pepsi', message: 'bar4', date: '2020-05-13'}))
+            .then(() => dataStore.table('events').createNew({ projectid: 'pepsi', message: 'bar5', date: '2020-05-13'}))
+            .then(() => table.queryMany({}, { limitCount: 3 }))
+            .then(result => {
+                should(result.length).be.equal(3);
+            })
+            .then(() => table.queryMany({ projectid: 'pepsi'}))
+            .then(result => {
+                should(result.length).be.equal(3);
+            })
+            .then(() => table.queryMany({ projectid: 'pepsi'}, { limitCount: 2 }))
+            .then(result => {
+                should(result.length).be.equal(2);
+            })
+            .then(() => dataStore.close())
+            ;
+    });
+
+
+    it(testCasePrefix + '-order', function() {
+        const dataStore = new DataStore(logger, isDebug);
+
+        dataStore.meta()
+            .table('events')
+                .driverParams(driverParams)
+                .key('projectid')
+                .key('message')
+                .field('date')
+        ;
+
+        dataStore.init();
+
+        const table = dataStore.table('events');
+
+        return dataStore.waitConnect()
+            .then(() => dataStore.table('events').deleteMany())
+            .then(() => dataStore.table('events').createNew({ projectid: 'coke', message: 'foo1', date: '2020-08-10'}))
+            .then(() => dataStore.table('events').createNew({ projectid: 'pepsi', message: 'bar4', date: '2020-05-13'}))
+            .then(() => dataStore.table('events').createNew({ projectid: 'pepsi', message: 'bar5', date: '2020-05-13'}))
+            .then(() => dataStore.table('events').createNew({ projectid: 'coke', message: 'bar1', date: '2020-05-12'}))
+            .then(() => dataStore.table('events').createNew({ projectid: 'pepsi', message: 'foo2', date: '2020-05-11'}))
+            .then(() => table.queryMany({}, { order: { fields: [{ name: 'message', asc: true }]}}))
+            .then(result => {
+                should(result.map(x => x.message)).be.eql(
+                    [
+                        'bar1',
+                        'bar4',
+                        'bar5',
+                        'foo1',
+                        'foo2'
+                    ]
+                );
+            })
+            .then(() => table.queryMany({}, { order: { fields: [{ name: 'message', asc: false }]}}))
+            .then(result => {
+                should(result.map(x => x.message)).be.eql(
+                    [
+                        'foo2',
+                        'foo1',
+                        'bar5',
+                        'bar4',
+                        'bar1',
+                    ]
+                );
+            })
+            .then(() => dataStore.close())
+            ;
+    });
+
+
+    it(testCasePrefix + '-limit-and-order', function() {
+        const dataStore = new DataStore(logger, isDebug);
+
+        dataStore.meta()
+            .table('events')
+                .driverParams(driverParams)
+                .key('projectid')
+                .key('message')
+                .field('date')
+        ;
+
+        dataStore.init();
+
+        const table = dataStore.table('events');
+
+        return dataStore.waitConnect()
+            .then(() => dataStore.table('events').deleteMany())
+            .then(() => dataStore.table('events').createNew({ projectid: 'coke', message: 'foo1', date: '2020-08-10'}))
+            .then(() => dataStore.table('events').createNew({ projectid: 'pepsi', message: 'bar4', date: '2020-05-13'}))
+            .then(() => dataStore.table('events').createNew({ projectid: 'pepsi', message: 'bar5', date: '2020-05-13'}))
+            .then(() => dataStore.table('events').createNew({ projectid: 'coke', message: 'bar1', date: '2020-05-12'}))
+            .then(() => dataStore.table('events').createNew({ projectid: 'pepsi', message: 'foo2', date: '2020-05-11'}))
+            .then(() => table.queryMany({}, { limitCount: 3, order: { fields: [{ name: 'message', asc: false }]}}))
+            .then(result => {
+                should(result.map(x => x.message)).be.eql(
+                    [
+                        'foo2',
+                        'foo1',
+                        'bar5'
+                    ]
+                );
+            })
+            .then(() => dataStore.close())
+            ;
+    });
+
 });
 
 }

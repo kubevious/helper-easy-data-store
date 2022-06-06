@@ -3,7 +3,7 @@ import { ILogger } from 'the-logger';
 
 import { MySqlDriver, MySqlStatement } from '@kubevious/helper-mysql';
 import { MetaTable } from '../../meta/meta-table';
-import { FilterOptions } from '../../driver';
+import { FilterOptions, OrderOptions } from '../../driver';
 import { MetaTableColumn } from '../../meta/meta-table-column';
 
 export class MySqlTableStatementStore {
@@ -89,7 +89,9 @@ export class MySqlTableStatementStore {
     public constructSelectSQL(
         filterColumnChoice?: MetaTableColumn[],
         selectColumnChoice?: MetaTableColumn[],
-        fieldFilters?: FilterOptions)
+        fieldFilters?: FilterOptions,
+        order?: OrderOptions,
+        limitCount?: number)
     {
         let finalFilterColumns: MetaTableColumn[];
         if (filterColumnChoice) {
@@ -111,28 +113,50 @@ export class MySqlTableStatementStore {
         sql += `\`${this._name}\``;
 
 
-        let filterCriteria : string[] = [];
-
-        if (finalFilterColumns.length > 0)
         {
-            filterCriteria = finalFilterColumns.map((x) => this._makeColumnFilterSql(x));
+            let filterCriteria : string[] = [];
+            if (finalFilterColumns.length > 0)
+            {
+                filterCriteria = finalFilterColumns.map((x) => this._makeColumnFilterSql(x));
+            }
+            if (fieldFilters?.fields && fieldFilters.fields.length > 0)
+            {
+                const filters = fieldFilters.fields.map((x) => {
+                    if (_.isString(x.value)) {
+                        return `(\`${x.name}\` ${x.operator} '${x.value}')`
+                    } else {
+                        return `(\`${x.name}\` ${x.operator} ${x.value})`
+                    }
+                });
+                filterCriteria = _.concat(filterCriteria, filters);
+            }
+            if (filterCriteria.length > 0) {
+                sql += ' WHERE ';
+                sql += filterCriteria.join(' AND ');
+            }
         }
 
-        if (fieldFilters && fieldFilters.fields && fieldFilters.fields.length > 0)
         {
-            const filters = fieldFilters.fields.map((x) => {
-                if (_.isString(x.value)) {
-                    return `(\`${x.name}\` ${x.operator} '${x.value}')`
-                } else {
-                    return `(\`${x.name}\` ${x.operator} ${x.value})`
-                }
-            });
-            filterCriteria = _.concat(filterCriteria, filters);
+            let orderCriteria : string[] = [];
+            if (order?.fields && order.fields.length > 0)
+            {
+                orderCriteria = order.fields.map((x) => {
+                    if (x.asc) {
+                        return `\`${x.name}\` ASC`;
+                    } else {
+                        return `\`${x.name}\` DESC`;
+                    }
+                });
+            }
+            if (orderCriteria.length > 0) {
+                sql += ' ORDER BY ';
+                sql += orderCriteria.join(', ');
+            }
         }
 
-        if (filterCriteria.length > 0) {
-            sql += ' WHERE ';
-            sql += filterCriteria.join(' AND ');
+        if (limitCount)
+        {
+            sql += ` LIMIT ${limitCount}`;
         }
 
         sql += ';';

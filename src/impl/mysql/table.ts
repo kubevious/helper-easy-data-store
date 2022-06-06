@@ -284,11 +284,13 @@ export class MySqlTableImpl<TRow = Data> implements InternalTableDriver<TRow>
         queryValues: any[],
         options: QueryOptions) : Promise<any[]>
     {
-        if (options.filters && options.filters.fields) {
+        if (!this._isCacheableStatementSelect(options)) {
             const sql = this._statementStore.constructSelectSQL(
                 queryColumns,
                 selectColumns,
-                options.filters);
+                options.filters,
+                options.order,
+                options.limitCount);
             return this._driver.executeSql(sql, queryValues);
         }
 
@@ -298,6 +300,27 @@ export class MySqlTableImpl<TRow = Data> implements InternalTableDriver<TRow>
                 queryColumns,
                 selectColumns)
         })
+    }
+
+    private _isCacheableStatementSelect(options: QueryOptions)
+    {
+        if (options.filters?.fields) {
+            if (options.filters?.fields.length > 0) {
+                return false;
+            }
+        }
+
+        if (options.order?.fields) {
+            if (options.order?.fields.length > 0) {
+                return false;
+            }
+        }
+
+        if (options.limitCount) {
+            return false;
+        }
+
+        return true;
     }
 
     private _executeDelete(queryFilters: ColumnValue[]): Promise<any[]> {
