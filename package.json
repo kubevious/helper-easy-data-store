@@ -1,6 +1,6 @@
 {
   "name": "@kubevious/easy-data-store",
-  "version": "1.0.12",
+  "version": "1.0.13",
   "description": "Easy DataStore Library",
   "main": "dist/index.js",
   "types": "dist",
