@@ -1,5 +1,5 @@
 import _ from 'the-lodash';
-import { Promise } from 'the-promise';
+import { MyPromise } from 'the-promise';
 import { calculateObjectHashStr } from './utils/hash-utils';
 import { DeltaAction, ISynchronizer, ITableDriver } from './driver';
 import { MetaTable } from './meta/meta-table';
@@ -102,7 +102,7 @@ export class TableSynchronizer<TRow> implements ISynchronizer<TRow> {
     private _executeDelta(delta: DeltaAction<TRow>[]): Promise<any> {
         this.logger.verbose('[_executeDelta] delta: ', delta);
 
-        return Promise.serial<DeltaAction<TRow>, any>(delta, (x) => {
+        return MyPromise.serial<DeltaAction<TRow>, any>(delta, (x) => {
             if (x.shouldCreate) {
                 return this._dataStoreTable.create(x.item);
             } else {

@@ -1,7 +1,7 @@
 import _ from 'the-lodash'
 import { Data, IDriver, InternalTableDriver } from '../../driver';
 import { ILogger } from 'the-logger';
-import { Promise, Resolvable } from 'the-promise';
+import { MyPromise, Resolvable } from 'the-promise';
 
 import { CacheStore } from '@kubevious/helper-cache';
 import { MySqlDriver } from '@kubevious/helper-mysql';
@@ -81,7 +81,7 @@ export class MySQL implements IDriver {
         const myDriver = driverDict[_.keys(driverDict)[0]];
 
         return myDriver.executeInTransaction(() => {
-            return Promise.construct((resolve, reject) => {
+            return MyPromise.construct<void>((resolve, reject) => {
                 return Promise.resolve(cb())
                     .then(() => resolve())
                     .catch(reason => reject(reason));
@@ -192,7 +192,7 @@ export class MySQL implements IDriver {
         this._isConnected = newIsConnected;
         if (this._isConnected) {
             this.logger.info('[_determineConnected] is connected');
-            Promise.serial(this._connectListeners, x => this._trigger(x))
+            MyPromise.serial(this._connectListeners, x => this._trigger(x))
                 .catch(reason => {
                     this.logger.error("[_determineConnected] ", reason);
                 });
@@ -201,7 +201,7 @@ export class MySQL implements IDriver {
 
     private _exec<T>(cb : (driver: MySqlDriver) => T): Resolvable<T[]>
     {
-        return Promise.serial(_.values(this._databases), x => {
+        return MyPromise.serial(_.values(this._databases), x => {
             return cb(x);
         });
     }

@@ -1,6 +1,6 @@
 import { ILogger } from 'the-logger';
 import { MetaTable } from './meta/meta-table';
-import { Promise, Resolvable } from 'the-promise';
+import { Resolvable } from 'the-promise';
 import { CacheStoreParams } from '@kubevious/helper-cache/dist/cache-store';
 
 export type Data = Record<string, any>;

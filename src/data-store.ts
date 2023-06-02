@@ -1,5 +1,5 @@
 import _ from 'the-lodash';
-import { Promise, Resolvable } from 'the-promise';
+import { MyPromise, Resolvable } from 'the-promise';
 import { ILogger } from 'the-logger';
 import { MetaStore, MetaStoreBuilder, MetaStoreData } from './meta/meta-store';
 import { IDriver, ITableDriver, Data, ConnectFunc, CacheOptions } from './driver';
@@ -103,7 +103,7 @@ export class DataStore implements ITableAccessor {
             return Promise.resolve();
         }
 
-        return Promise.construct<any>((resolve, reject) => {
+        return MyPromise.construct((resolve, reject) => {
             this._oneTimeConnectListeners.push(resolve);
         });
     }
@@ -181,8 +181,8 @@ export class DataStore implements ITableAccessor {
         return driverInfo.driver.executeInTransaction(tableMetas, cb);
     }
 
-    private _driversExec<T>(action: (driver: IDriver) => Resolvable<T>) {
-        return Promise.parallel(_.values(this._drivers), (driverInfo) => {
+    private _driversExec<T>(action: (driver: IDriver) => Promise<T>) {
+        return MyPromise.parallel(_.values(this._drivers), (driverInfo) => {
             return action(driverInfo.driver);
         });
     }
@@ -206,7 +206,7 @@ export class DataStore implements ITableAccessor {
         this._isConnected = newIsConnected;
         if (this._isConnected) {
             this.logger.info("[_determineConnected] is connected.");
-            Promise.serial(this._connectListeners, x => this._trigger(x))
+            MyPromise.serial(this._connectListeners, x => this._trigger(x))
                 .catch(reason => {
                     this.logger.error("[_determineConnected] ", reason);
                 });

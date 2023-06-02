@@ -1,5 +1,5 @@
 import _ from 'the-lodash';
-import { Promise, Resolvable } from 'the-promise';
+import { Resolvable } from 'the-promise';
 import { MetaTable } from './meta/meta-table';
 import { MetaTableColumn } from './meta/meta-table-column';
 import { FieldsOptions, Data } from './driver';
